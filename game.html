@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body onload="startGame()">
+
+
+<script>
+
+    var myGamePiece;
+
+    function startGame() {
+        myGamePiece = new PlayerObject(10, 120);
+        myGameArea.start();
+    }
+
+    var myGameArea = {
+        canvas: document.createElement("canvas"),
+        start: function () {
+
+            this.canvas.width = 1920;
+            this.canvas.height = 1080;
+
+            this.canvas.style.cursor = "none"; //hide the original cursor
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.interval = setInterval(updateGameArea, 10);
+            window.addEventListener('mousemove', function (e) {
+                myGameArea.x = e.pageX;
+                myGameArea.y = e.pageY;
+            })
+        },
+        clear: function () {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }
+
+
+
+
+    function PlayerObject(x, y) {
+
+        const playerObjectWidth = 30;
+        const playerObjectHeight = 30;
+        const playerObjectColor = "red";
+
+        this.width = playerObjectWidth;
+        this.height = playerObjectHeight;
+        this.x = x;
+        this.y = y;
+
+        this.update = function () {
+            let ctx = myGameArea.context;
+            ctx.fillStyle = playerObjectColor;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+
+    }
+
+    // Updates the game
+    function updateGameArea() {
+
+        myGameArea.clear();
+
+        if (myGameArea.x && myGameArea.y) {
+            myGamePiece.x = myGameArea.x;
+            myGamePiece.y = myGameArea.y;
+        }
+        myGamePiece.update();
+    }
+</script>
+
+</body>
+</html>

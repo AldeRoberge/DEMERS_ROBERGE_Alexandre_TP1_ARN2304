@@ -6,12 +6,17 @@
     <link rel="stylesheet" type="text/css" href="css/wavy.css"/>
     <link rel="stylesheet" type="text/css" href="css/style.css"/>
 
+    <style>
+        .game-canvas {
+            border: 1px solid #d3d3d3;
+            background-color: #f1f1f1;
+        }
+    </style>
 
 </head>
 <body>
 
 <audio loop autoplay src="audio/EndlessSummer.mp3" id="playAudio"></audio>
-
 
 <br>
 
@@ -31,131 +36,15 @@
 
             <label>Nom du joueur <input id="message" value="" type="text"></label><br>
             <br>
-            <input id="play" type="button" value="Démarrer">
+
+            <a href="game.html">
+                <input id="play" type="button" value="Démarrer">
+            </a>
             <br>
         </div>
-
-        <div id="inventory">
-            <p>Inventory</p>
-
-            <div id="inventory-slots">
-
-                <div class="inventory-slot" draggable="true">
-                    <img src="images/empty.png" alt="Inv slot 0"
-                         class="inline">
-                </div>
-
-                <div class="inventory-slot" draggable="true">
-                    <img src="images/empty.png" alt="Inv slot 1"
-                         class="inline">
-                </div>
-
-                <div class="inventory-slot" draggable="true">
-                    <img src="images/empty.png" alt="Inv slot 2"
-                         class="inline">
-                </div>
-
-                <div class="inventory-slot" draggable="true">
-                    <img src="images/empty.png" alt="Inv slot 3"
-                         class="inline">
-                </div>
-
-            </div>
-        </div>
-
     </div>
-
 </div>
 
-<script>
-
-    let inventory = [];
-
-    let canvas = document.getElementById("wavycanvas");
-
-    document.addEventListener('DOMContentLoaded', (event) => {
-
-        var dragSrcEl = null;
-
-        function handleDragStart(e) {
-            this.style.opacity = '0.4';
-
-            dragSrcEl = this;
-
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
-        }
-
-        function handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-
-            e.dataTransfer.dropEffect = 'move';
-
-            return false;
-        }
-
-        function handleDragEnter(e) {
-            this.classList.add('over');
-        }
-
-        function handleDragLeave(e) {
-            this.classList.remove('over');
-        }
-
-        function handleDrop(e) {
-            if (e.stopPropagation) {
-                e.stopPropagation(); // stops the browser from redirecting.
-            }
-
-            if (dragSrcEl !== this) {
-                dragSrcEl.innerHTML = this.innerHTML;
-                this.innerHTML = e.dataTransfer.getData('text/html');
-            }
-
-            return false;
-        }
-
-        function setInventorySlot(slot, id) {
-
-            console.log("Setting slot " + slot + " with image " + id)
-
-            // Update the image
-            inventory[slot].src = id + ".png";
-
-        }
-
-        function handleDragEnd(e) {
-            this.style.opacity = '1';
-
-            items.forEach(function (item) {
-                item.classList.remove('over');
-            });
-        }
-
-        let items = document.querySelectorAll('.inventory-slot');
-
-        console.log("Found " + items.length + "...");
-
-        let index = 0;
-
-        items.forEach(function (item) {
-            item.addEventListener('dragstart', handleDragStart, false);
-            item.addEventListener('dragenter', handleDragEnter, false);
-            item.addEventListener('dragover', handleDragOver, false);
-            item.addEventListener('dragleave', handleDragLeave, false);
-            item.addEventListener('drop', handleDrop, false);
-            item.addEventListener('dragend', handleDragEnd, false);
-
-            inventory[index] = item.getElementById("image");
-            index++;
-        });
-
-        setInventorySlot(0, "sound_off");
-
-    });
-</script>
 
 <script src="js/wavy.js"></script>
 <script src="js/script.js"></script>
