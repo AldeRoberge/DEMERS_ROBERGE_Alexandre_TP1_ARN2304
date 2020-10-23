@@ -9,12 +9,24 @@
 
 <script>
 
+    var a = [];
+
     var myGamePiece;
+
+    var objectSpawner;
 
     function startGame() {
         myGamePiece = new PlayerObject(10, 120);
+
+
         myGameArea.start();
+
+        objectSpawner = new StarSpawner();
+
     }
+
+
+
 
     var myGameArea = {
         canvas: document.createElement("canvas"),
@@ -37,9 +49,6 @@
         }
     }
 
-
-
-
     function PlayerObject(x, y) {
 
         const playerObjectWidth = 30;
@@ -51,13 +60,56 @@
         this.x = x;
         this.y = y;
 
-        this.update = function () {
-            let ctx = myGameArea.context;
+        this.update = function (gameTick, ctx) {
             ctx.fillStyle = playerObjectColor;
             ctx.fillRect(this.x, this.y, this.width, this.height);
         }
 
     }
+
+    function StarSpawner() {
+
+        var index = 0;
+
+        this.update = function (gameTick) {
+            index++;
+
+            if (index > 100) {
+                console.log("Spawing...");
+                index = 0;
+
+                a.push(new Star());
+            }
+        }
+
+        a.push(this);
+    }
+
+
+    // A star is an aesthetic object
+    function Star() {
+
+        var width = 10;
+        var height = 10;
+
+        this.x = Math.random() * 1000;
+        this.y = -10;
+        this.z = 1;
+
+        this.update = function (gameTick, context) {
+            // Update position
+            this.y += 1;
+
+            let cercle = new Path2D();
+            cercle.arc(this.x, this.y, 25, 0, 2 * Math.PI);
+
+            context.fillStyle = "black";
+            context.fill(cercle);
+
+        }
+    }
+
+    var gameTick = 0;
 
     // Updates the game
     function updateGameArea() {
@@ -68,7 +120,22 @@
             myGamePiece.x = myGameArea.x;
             myGamePiece.y = myGameArea.y;
         }
-        myGamePiece.update();
+
+        gameTick++;
+
+        console.log("Updating " + a.length + " objects with time delta " + gameTick);
+
+        a.forEach(element => {
+                //console.log("Updating " + element);
+                element.update(gameTick, myGameArea.context);
+
+                // Clear the graph path before repainting
+                myGameArea.context.beginPath();
+            }
+        );
+
+        // Draw the game object on top of everything else
+        myGamePiece.update(gameTick, myGameArea.context);
     }
 </script>
 
