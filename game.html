@@ -3,116 +3,536 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+
+    <style>
+        .game-canvas {
+            border: 1px solid #d3d3d3;
+            background-color: #f1f1f1;
+        }
+
+        .dialog {
+            background-color: #161616;
+        }
+    </style>
+
 </head>
 <body onload="startGame()">
 
 
 <script>
 
-    var a = [];
+    const worldObjects = [];
 
-    var myGamePiece;
+    let myGamePiece;
 
-    var objectSpawner;
+    let objectSpawner;
+
+    const gameUpdateRate = 1;
+
+    // Sounds
+    var hurtSound;
+    var deathSound;
 
     function startGame() {
-        myGamePiece = new PlayerObject(10, 120);
-
+        myGamePiece = new PlayerObject(gameWidth / 2, gameHeight / 2);
 
         myGameArea.start();
 
         objectSpawner = new StarSpawner();
 
+        hurtSound = new Audio("audio/hurt.wav");
+        deathSound = new Audio("audio/death.wav");
+
+        const showTextDelay = 1000;
+
+        new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Perigno Maximus", "25px Arial", "white", showTextDelay);
+        new UIText(gameWidth / 2, gameHeight / 1.75, "présentent", "20px Arial", "white", showTextDelay);
+
+        setTimeout(function () {
+
+            let textShowLength = showTextDelay * 1.5;
+
+            var text = new UIText(gameWidth / 2, gameHeight / 2, "Jeux COOLIO", "30px Arial", "white", textShowLength);
+
+            setTimeout(function () {
+                beginGame();
+            }, textShowLength);
+
+        }, showTextDelay);
+
+    }
+
+    var isGamePaused = false;
+
+    var score = 0;
+    var scoreCountText;
+
+    var gold = 0;
+    var goldCoinsText;
+
+    // Game is ended, player has no more health
+    var gameEnd = false;
+
+    var maxHealth = 20;
+    var currentHealth = maxHealth;
+
+    let drawHealthBar = false;
+
+    // Goes from 255 to 0 to show player hurt (255 = white, 0 = red (hurt))
+    let damageIndicator = 255;
+
+    // The player is hurt / damaged
+    function HitPlayer(damage) {
+        damageIndicator = 0; // See Player update method
+        currentHealth -= damage;
+
+        hurtSound.play();
+
+        if (currentHealth < 0) {
+            deathSound.play();
+            gameEnd = true;
+            ShowCursor();
+            setDialog("");
+        }
     }
 
 
+    function beginGame() {
 
+        const stopBlinkingTime = 800;
+
+        // Shows the score
+        goldCoinsText = new UIText(gameWidth - 100, 50, "Gold : " + gold, "30px Arial", "white", -1);
+        goldCoinsText.blink(true);
+
+        scoreCountText = new UIText(100, 50, "Score : " + score, "30px Arial", "white", -1);
+        scoreCountText.blink(true);
+
+
+        setTimeout(function () {
+            scoreCountText.blink(false);
+            goldCoinsText.blink(false);
+
+            new PhaseHandler();
+
+            drawHealthBar = true;
+        }, stopBlinkingTime);
+    }
+
+    var gameWidth = 1200;
+    var gameHeight = 800;
 
     var myGameArea = {
         canvas: document.createElement("canvas"),
         start: function () {
 
-            this.canvas.width = 1920;
-            this.canvas.height = 1080;
+            this.canvas.width = gameWidth;
+            this.canvas.height = gameHeight;
 
             this.canvas.style.cursor = "none"; //hide the original cursor
             this.context = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-            this.interval = setInterval(updateGameArea, 10);
+
+            setInterval(updateGameArea, gameUpdateRate);
+
             window.addEventListener('mousemove', function (e) {
                 myGameArea.x = e.pageX;
                 myGameArea.y = e.pageY;
             })
         },
         clear: function () {
-            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.context.fillStyle = "black";
+            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
+    }
+
+    function ShowCursor() {
+        myGameArea.canvas.style.cursor = "auto"; //show the cursor
+    }
+
+    function UIText(x, y, text, font, color, destroyAfter) {
+
+        let displayText = text;
+
+        let timeLived = 0;
+
+        this.setText = function (text) {
+            displayText = text;
+        }
+
+        this.blink = function (isBlinking) {
+            this.isBlinking = isBlinking;
+        }
+
+        const blinkTimeLength = 100;
+
+        let blinkTime = 0;
+
+        this.update = function (gameTick, ctx) {
+
+            timeLived += gameTick;
+
+            if (destroyAfter > 0 && timeLived > destroyAfter) {
+                console.log("Destroyed text.");
+
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
+            blinkTime += gameTick;
+
+            if (blinkTime > blinkTimeLength * 2) {
+                blinkTime = 0;
+            }
+
+            if (this.isBlinking && blinkTime > blinkTimeLength) {
+                return;
+            }
+
+            ctx.textAlign = "center";
+            ctx.fillStyle = color;
+            ctx.font = font;
+            ctx.fillText(displayText, x, y);
+        }
+
+        worldObjects.push(this);
+
     }
 
     function PlayerObject(x, y) {
 
-        const playerObjectWidth = 30;
-        const playerObjectHeight = 30;
-        const playerObjectColor = "red";
+        // The final size of the player
+        let losangeEndSize = 20;
 
-        this.width = playerObjectWidth;
-        this.height = playerObjectHeight;
+        // The size of the player
+        let losangeSize = 200;
+
         this.x = x;
         this.y = y;
 
         this.update = function (gameTick, ctx) {
-            ctx.fillStyle = playerObjectColor;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-        }
 
+            losangeSize -= gameTick / 10;
+
+            if (losangeSize <= losangeEndSize) {
+                losangeSize = losangeEndSize;
+            }
+
+            // Draw the main triangle
+
+
+            if (damageIndicator < 255) {
+                damageIndicator += 5;
+            }
+
+            ctx.fillStyle = "rgb(255," + damageIndicator + "," + damageIndicator + ")";
+
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - losangeSize);
+            ctx.lineTo(this.x - losangeSize, this.y + losangeSize);
+            ctx.lineTo(this.x + losangeSize, this.y + losangeSize);
+            ctx.fill();
+
+            // Draw the red propellers
+
+            ctx.fillStyle = "red";
+
+            ctx.beginPath();
+            ctx.moveTo(this.x - losangeSize, this.y + losangeSize);
+            ctx.lineTo(this.x - (losangeSize / 2), this.y + losangeSize * 2);
+            ctx.lineTo(this.x, this.y + losangeSize);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + losangeSize, this.y + losangeSize);
+            ctx.lineTo(this.x + (losangeSize / 2), this.y + losangeSize * 2);
+            ctx.lineTo(this.x, this.y + losangeSize);
+            ctx.fill();
+
+            // Draw the orange (flickering) propellers
+
+            ctx.fillStyle = "orange";
+
+            const flickeringHeight = this.y + (losangeSize * 2) - (Math.random() * 15) - 0.25;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x - losangeSize, this.y + losangeSize);
+            ctx.lineTo(this.x - (losangeSize / 2), flickeringHeight);
+            ctx.lineTo(this.x, this.y + losangeSize);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + losangeSize, this.y + losangeSize);
+            ctx.lineTo(this.x + (losangeSize / 2), flickeringHeight);
+            ctx.lineTo(this.x, this.y + losangeSize);
+            ctx.fill();
+
+
+            // Draw the healthbar
+            if (drawHealthBar) {
+                const sizeFactor = 1;
+                const barSize = maxHealth / sizeFactor;
+
+                ctx.fillStyle = "red";
+                ctx.fillRect(this.x - barSize / 2, this.y + losangeSize * 2.5, barSize, 10);
+
+                ctx.fillStyle = "green";
+                ctx.fillRect(this.x - barSize / 2, this.y + losangeSize * 2.5, currentHealth / sizeFactor, 10);
+            }
+
+
+        }
     }
 
     function StarSpawner() {
 
-        var index = 0;
+        const spawnStarTime = 10;
+        let spawnStarIndex = 0;
 
-        this.update = function (gameTick) {
-            index++;
+        this.update = function (tickDelta) {
+            spawnStarIndex += tickDelta;
 
-            if (index > 100) {
-                console.log("Spawing...");
-                index = 0;
+            if (spawnStarIndex > spawnStarTime) {
+                spawnStarIndex = 0;
 
-                a.push(new Star());
+                const starRadius = 1;
+                const x = Math.random() * gameWidth;
+                const y = -(starRadius / 2);
+                worldObjects.push(new Star(x, y, starRadius));
             }
         }
 
-        a.push(this);
+        worldObjects.push(this);
+    }
+
+    function Phase(enemies, phaseHandler, text, textColor, font) {
+
+        this.phaseHandler = phaseHandler;
+        this.enemies = enemies;
+
+        let tickIndex = 0;
+
+        this.start = function () {
+            setDialog(text, textColor, font);
+        }
+
+        this.update = function (tickDelta) {
+
+            score++;
+
+            tickIndex += tickDelta;
+
+            if (tickIndex > 10) {
+                tickIndex = 0;
+
+                const starRadius = 1;
+                const x = Math.random() * gameWidth;
+                const y = -(starRadius / 2);
+                worldObjects.push(new Enemy(x, y, 10, 1));
+            }
+        }
+    }
+
+    function PhaseHandler() {
+
+        let currentPhaseIndex = -1;
+
+        let phase0 = new Phase(100, this, "FEEL MY WRATH", "red", "30px Arial");
+        let phase1 = new Phase(100, this);
+        let phase2 = new Phase(100, this);
+        let phase3 = new Phase(100, this);
+        let phase4 = new Phase(100, this);
+        let phase5 = new Phase(100, this);
+        let phase6 = new Phase(100, this);
+
+        let isInBetweenPhases = false;
+        let timeBeforeNextPhase = 0;
+
+        this.nextPhase = function (delay) {
+            isInBetweenPhases = true;
+            timeBeforeNextPhase = delay;
+        }
+
+        this.update = function (tickDelta) {
+
+            if (isInBetweenPhases) {
+
+                if (timeBeforeNextPhase > 0) {
+                    // Wait for next phase...
+                    timeBeforeNextPhase -= 1;
+                } else {
+                    // Ready for next phase
+                    isInBetweenPhases = false;
+                    currentPhaseIndex++;
+                    GetCurrentPhase().start();
+                }
+
+                return;
+            }
+
+            GetCurrentPhase().update(tickDelta);
+
+        }
+
+        // TODO
+        this.nextPhase(1000);
+        this.nextPhase(1);
+
+        function GetCurrentPhase() {
+            switch (currentPhaseIndex) {
+                case 0:
+                    return phase0;
+
+                case 1:
+                    return phase1;
+
+                case 2:
+                    return phase2;
+
+                case 3:
+                    return phase3;
+
+                case 4:
+                    return phase4;
+
+                case 5:
+                    return phase5;
+
+                case 6:
+                    return phase6;
+
+            }
+        }
+
+        worldObjects.push(this);
+    }
+
+
+    function CalculateDistance(x1, y1, x2, y2) {
+        var a = x1 - x2;
+        var b = y1 - y2;
+
+        return Math.sqrt(a * a + b * b);
+    }
+
+
+    function Enemy(x, y, size, damage) {
+
+        this.x = x;
+        this.y = y;
+
+        this.update = function (tickDelta, ctx) {
+
+            if (this.y > gameHeight) {
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
+            let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
+
+            if (distanceToPlayer < 20) {
+
+                HitPlayer(damage);
+
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
+            ctx.fillStyle = "red";
+            ctx.beginPath();
+            ctx.moveTo(this.x - size, this.y + size);
+            ctx.lineTo(this.x - (size / 2), this.y + size * 2);
+            ctx.lineTo(this.x, this.y + size);
+            ctx.fill();
+
+            this.y += tickDelta;
+
+
+        }
+
     }
 
 
     // A star is an aesthetic object
-    function Star() {
+    function Star(x, y, radius) {
 
-        var width = 10;
-        var height = 10;
+        this.radius = radius;
 
-        this.x = Math.random() * 1000;
-        this.y = -10;
+        this.x = x;
+        this.y = y;
         this.z = 1;
 
-        this.update = function (gameTick, context) {
+        this.update = function (tickDelta, context) {
+
+            if (this.y > gameHeight) {
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
             // Update position
-            this.y += 1;
+            this.y += tickDelta / 2;
 
             let cercle = new Path2D();
-            cercle.arc(this.x, this.y, 25, 0, 2 * Math.PI);
+            cercle.arc(this.x, this.y, radius, 0, 2 * Math.PI);
 
-            context.fillStyle = "black";
+            context.fillStyle = "white";
             context.fill(cercle);
 
         }
     }
 
-    var gameTick = 0;
+    var dialogFont = "";
+    var dialogColor = "";
+    var dialogText = "";
+
+    function setDialog(text, color, font) {
+        this.dialogText = font;
+        this.dialogColor = color;
+        this.dialogText = "«" + text + "»";
+    }
+
+    function clearDialog() {
+        this.dialogText = "";
+    }
+
+    function drawDialogView(ctx) {
+
+        if (dialogText) {
+            ctx.beginPath();
+
+            ctx.textAlign = "center";
+            ctx.fillStyle = dialogColor;
+            ctx.font = dialogFont;
+            ctx.fillText(dialogText, gameWidth / 2, gameHeight - 20);
+        }
+
+    }
+
+    let lastUpdateTime = 0;
+
+    let beginRender = new Date();
+
+
+    window.addEventListener('keyup', function (event) {
+        if (event.defaultPrevented) {
+            return;
+        }
+
+        var key = event.key || event.keyCode;
+
+        if (key === 'Escape' || key === 'Esc' || key === 'Space') {
+            isGamePaused = !isGamePaused;
+        }
+    });
 
     // Updates the game
     function updateGameArea() {
+
+        const context = myGameArea.context;
+
+        if (isGamePaused) {
+            return;
+        }
 
         myGameArea.clear();
 
@@ -121,13 +541,35 @@
             myGamePiece.y = myGameArea.y;
         }
 
-        gameTick++;
+        if (goldCoinsText && scoreCountText) {
+            goldCoinsText.setText("Gold : " + gold);
+            scoreCountText.setText("Score : " + score);
+        }
 
-        console.log("Updating " + a.length + " objects with time delta " + gameTick);
 
-        a.forEach(element => {
+        if (lastUpdateTime === 2) {
+            console.log("Updating " + worldObjects.length + " objects with time delta " + lastUpdateTime);
+        }
+
+        if (gameEnd) {
+
+            context.beginPath();
+
+            context.textAlign = "center";
+            context.fillStyle = "red";
+            context.font = "20px Arial";
+            context.fillText("GAME OVER", gameWidth / 2, gameHeight / 2 - 20);
+
+            context.font = "13px Arial";
+            context.fillText("Score : " + score, gameWidth / 2, gameHeight / 2);
+
+            return;
+        }
+
+
+        worldObjects.forEach(element => {
                 //console.log("Updating " + element);
-                element.update(gameTick, myGameArea.context);
+                element.update(lastUpdateTime, context);
 
                 // Clear the graph path before repainting
                 myGameArea.context.beginPath();
@@ -135,8 +577,23 @@
         );
 
         // Draw the game object on top of everything else
-        myGamePiece.update(gameTick, myGameArea.context);
+        myGamePiece.update(lastUpdateTime, context);
+
+        drawDialogView(context);
+
+        const endRender = new Date();
+        lastUpdateTime = (endRender.getMilliseconds() - beginRender.getMilliseconds()) / gameUpdateRate;
+
+        if (lastUpdateTime < 0) {
+            lastUpdateTime = 0;
+        }
+
+        //console.log("render : " + endRender.getMilliseconds() + ", " + beginRender.getMilliseconds())
+
+        beginRender = new Date();
+
     }
+
 </script>
 
 </body>
