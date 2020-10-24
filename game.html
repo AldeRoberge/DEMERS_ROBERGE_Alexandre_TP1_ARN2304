@@ -31,7 +31,16 @@
 
     // Sounds
     var hurtSound;
+    var healSound;
     var deathSound;
+    var goldSound;
+
+    var music;
+
+    let phaseHandler;
+
+    // World scroll
+    var isWorldScrolling = true;
 
     function startGame() {
         myGamePiece = new PlayerObject(gameWidth / 2, gameHeight / 2);
@@ -41,24 +50,11 @@
         objectSpawner = new StarSpawner();
 
         hurtSound = new Audio("audio/hurt.wav");
+        healSound = new Audio("audio/heal.wav");
+        goldSound = new Audio("audio/gold.wav");
         deathSound = new Audio("audio/death.wav");
 
-        const showTextDelay = 1000;
-
-        new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Perigno Maximus", "25px Arial", "white", showTextDelay);
-        new UIText(gameWidth / 2, gameHeight / 1.75, "présentent", "20px Arial", "white", showTextDelay);
-
-        setTimeout(function () {
-
-            let textShowLength = showTextDelay * 1.5;
-
-            var text = new UIText(gameWidth / 2, gameHeight / 2, "Jeux COOLIO", "30px Arial", "white", textShowLength);
-
-            setTimeout(function () {
-                beginGame();
-            }, textShowLength);
-
-        }, showTextDelay);
+        music = new Audio("audio/music.mp3");
 
     }
 
@@ -74,7 +70,7 @@
     var gameEnd = false;
 
     var maxHealth = 20;
-    var currentHealth = maxHealth;
+    var currentHealth = 0;
 
     let drawHealthBar = false;
 
@@ -91,9 +87,67 @@
         if (currentHealth < 0) {
             deathSound.play();
             gameEnd = true;
-            ShowCursor();
+            ShowCursor(true);
             setDialog("");
         }
+    }
+
+    // The player is healed
+    function HealPlayer(heal) {
+        damageIndicator = 255;
+
+        healSound.play();
+
+        currentHealth += heal;
+
+        if (currentHealth >= maxHealth) {
+            currentHealth = maxHealth;
+        }
+    }
+
+    function CollectGold(number) {
+        gold += number;
+
+        goldSound.play();
+    }
+
+
+
+    window.addEventListener("click", go);
+
+    let isGameStarted = false;
+
+    function go() {
+
+        if (!isGameStarted) {
+            isGameStarted = true;
+            music.play();
+
+            ShowCursor(false);
+
+            const showTextDelay = 1000;
+
+            new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Perigno Maximus", "25px Georgia", "white", showTextDelay);
+            new UIText(gameWidth / 2, gameHeight / 1.85, "présentent", "20px Georgia", "white", showTextDelay);
+
+            setTimeout(function () {
+
+                let textShowLength = showTextDelay * 1.5;
+
+                var text = new UIText(gameWidth / 2, gameHeight / 2, "S. T. A. R. S.", "40px Arial", "white", textShowLength);
+
+                setTimeout(function () {
+                    beginGame();
+                }, textShowLength);
+
+            }, showTextDelay);
+
+
+
+        }
+
+
+
     }
 
 
@@ -108,14 +162,15 @@
         scoreCountText = new UIText(100, 50, "Score : " + score, "30px Arial", "white", -1);
         scoreCountText.blink(true);
 
-
         setTimeout(function () {
             scoreCountText.blink(false);
             goldCoinsText.blink(false);
 
-            new PhaseHandler();
+            phaseHandler = new PhaseHandler();
 
             drawHealthBar = true;
+
+
         }, stopBlinkingTime);
     }
 
@@ -129,7 +184,7 @@
             this.canvas.width = gameWidth;
             this.canvas.height = gameHeight;
 
-            this.canvas.style.cursor = "none"; //hide the original cursor
+
             this.context = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
 
@@ -146,8 +201,14 @@
         }
     }
 
-    function ShowCursor() {
-        myGameArea.canvas.style.cursor = "auto"; //show the cursor
+    function ShowCursor(b) {
+
+        if (b) {
+            myGameArea.canvas.style.cursor = "auto"; //hide the original cursor
+        } else {
+            myGameArea.canvas.style.cursor = "none"; //hide the original cursor
+        }
+
     }
 
     function UIText(x, y, text, font, color, destroyAfter) {
@@ -205,14 +266,14 @@
         let losangeEndSize = 20;
 
         // The size of the player
-        let losangeSize = 200;
+        let losangeSize = 500;
 
         this.x = x;
         this.y = y;
 
         this.update = function (gameTick, ctx) {
 
-            losangeSize -= gameTick / 10;
+            losangeSize -= gameTick;
 
             if (losangeSize <= losangeEndSize) {
                 losangeSize = losangeEndSize;
@@ -220,12 +281,34 @@
 
             // Draw the main triangle
 
-
             if (damageIndicator < 255) {
-                damageIndicator += 5;
+                damageIndicator += 1;
             }
 
             ctx.fillStyle = "rgb(255," + damageIndicator + "," + damageIndicator + ")";
+
+
+            // LIMIT THE X AND Y SO THE PLAYER DOES NOT GO AWAY FROM THE CANVAS
+
+            // Clamp X
+            if (this.x < 20) {
+                this.x = 20;
+            } else if (this.x > gameWidth - 20) {
+                this.x = gameWidth - 20;
+            }
+
+            // Clamp Y
+            if (this.y < 20) {
+                this.y = 20;
+            } else if (this.y > gameHeight - 20) {
+                this.y = gameHeight - 20;
+            }
+
+            /**
+             *
+             * YOU'RE BOUND TO THIS PRISON SHELL, SLAVE
+             *
+             */
 
             ctx.beginPath();
             ctx.moveTo(this.x, this.y - losangeSize);
@@ -270,14 +353,14 @@
 
             // Draw the healthbar
             if (drawHealthBar) {
-                const sizeFactor = 1;
-                const barSize = maxHealth / sizeFactor;
+                const sizeFactor = 2;
+                const barSize = maxHealth * sizeFactor;
 
                 ctx.fillStyle = "red";
                 ctx.fillRect(this.x - barSize / 2, this.y + losangeSize * 2.5, barSize, 10);
 
                 ctx.fillStyle = "green";
-                ctx.fillRect(this.x - barSize / 2, this.y + losangeSize * 2.5, currentHealth / sizeFactor, 10);
+                ctx.fillRect(this.x - barSize / 2, this.y + losangeSize * 2.5, currentHealth * sizeFactor, 10);
             }
 
 
@@ -305,7 +388,136 @@
         worldObjects.push(this);
     }
 
-    function Phase(enemies, phaseHandler, text, textColor, font) {
+    function TextPhase(phaseHandler, text, textColor, font, time) {
+
+        this.start = function () {
+            console.log("Started text phase...");
+            setDialog(text, font, textColor);
+        }
+
+        let tickIndex = 0;
+
+        this.update = function (tickDelta) {
+
+            tickIndex += tickDelta;
+
+            if (tickIndex > time) {
+                clearDialog();
+                phaseHandler.nextPhase(1000);
+            }
+        }
+
+
+    }
+
+
+    function IntroPhase(enemies, phaseHandler, text, textColor, font) {
+
+        this.start = function () {
+            console.log("Started intro phase...");
+
+            setDialog("Your mission stars now.", "13px Arial", "red");
+        }
+
+        let tickIndex = 0;
+
+        this.update = function (tickDelta) {
+
+            tickIndex += tickDelta;
+
+            if (tickIndex > 1000) {
+                tickIndex = 0;
+
+                const x = GetRandomObjectSpawnPositionX();
+                worldObjects.push(new HealObject(x, -5));
+
+
+                phaseHandler.nextPhase(1000);
+
+            }
+        }
+    }
+
+    function RecompensePhase(heal, gold, phaseHandler) {
+
+        this.start = function () {
+            console.log("Started recompense phase...");
+        }
+
+        this.update = function (tickDelta) {
+
+            isWorldScrolling = false;
+
+            heal--;
+            gold--;
+
+            if (heal > 0) {
+                const x = GetRandomObjectSpawnPositionX();
+                const y = GetRandomObjectSpawnPositionY();
+
+                worldObjects.push(new HealObject(x, y));
+            }
+
+            if (gold > 0) {
+                const x = GetRandomObjectSpawnPositionX();
+                const y = GetRandomObjectSpawnPositionY();
+
+                worldObjects.push(new GoldObject(x, y));
+            }
+
+            if (heal < 0 && gold < 0) {
+                setDialog("")
+
+                phaseHandler.nextPhase(2000);
+            }
+
+        }
+    }
+
+
+    function EasyPhase(enemies, phaseHandler, spawnTime, message, color, enemySpeed, waveLength) {
+
+        this.start = function () {
+            console.log("Started easy phase...");
+
+            setDialog(message, color, "13px Arial");
+        }
+
+        let tickIndex = 0;
+
+        let tickCount = 0;
+
+        this.update = function (tickDelta) {
+
+            tickIndex += tickDelta;
+
+            if (tickIndex > spawnTime) {
+
+                tickCount++;
+
+                tickIndex = 0;
+
+                const x = GetRandomObjectSpawnPositionX();
+                worldObjects.push(new Enemy(x, -20, 20, 1, enemySpeed));
+            }
+
+            if (tickCount > waveLength) {
+                setDialog("")
+                phaseHandler.nextPhase(500);
+            }
+
+        }
+    }
+
+    function GetRandomObjectSpawnPositionX() {
+        return Math.random() * gameWidth;
+    }
+
+    function GetRandomObjectSpawnPositionY() {
+        return Math.random() * gameHeight;
+    }
+
+    function FeelMyWrathPhase(enemies, phaseHandler, text, textColor, font) {
 
         this.phaseHandler = phaseHandler;
         this.enemies = enemies;
@@ -316,6 +528,8 @@
             setDialog(text, textColor, font);
         }
 
+        let tickCount = 0;
+
         this.update = function (tickDelta) {
 
             score++;
@@ -323,13 +537,21 @@
             tickIndex += tickDelta;
 
             if (tickIndex > 10) {
+
+                tickCount++;
+
                 tickIndex = 0;
 
-                const starRadius = 1;
-                const x = Math.random() * gameWidth;
-                const y = -(starRadius / 2);
-                worldObjects.push(new Enemy(x, y, 10, 1));
+                const x = GetRandomObjectSpawnPositionX();
+                worldObjects.push(new Enemy(x, -5, 10, 1, 1));
             }
+
+            if (tickCount > 1000) {
+
+
+                phaseHandler.nextPhase(1000);
+            }
+
         }
     }
 
@@ -337,18 +559,20 @@
 
         let currentPhaseIndex = -1;
 
-        let phase0 = new Phase(100, this, "FEEL MY WRATH", "red", "30px Arial");
-        let phase1 = new Phase(100, this);
-        let phase2 = new Phase(100, this);
-        let phase3 = new Phase(100, this);
-        let phase4 = new Phase(100, this);
-        let phase5 = new Phase(100, this);
-        let phase6 = new Phase(100, this);
+        let phase0 = new IntroPhase(100, this);
+        let phase1 = new EasyPhase(100, this, 50, "Be warned of the dangers.", "green", 0.75, 30);
+        let phase2 = new TextPhase(this, "Good job!", "Red", "30px Arial", 3000);
+        let phase3 = new EasyPhase(100, this, 100, "You're doing good!", "yellow", 1, 20);
+        let phase4 = new EasyPhase(100, this, 100, "Keep going!", "orange", 1.5, 10);
+        let phase5 = new FeelMyWrathPhase(100, this, "FEEL MY WRATH!!!", "red", "30px Arial");
+        let phase6 = new RecompensePhase(10, 10, this);
+        let phase7 = new EasyPhase(100, this, 100, "Let's see...", "yellow", 1, 20);
 
         let isInBetweenPhases = false;
         let timeBeforeNextPhase = 0;
 
         this.nextPhase = function (delay) {
+            setDialog("");
             isInBetweenPhases = true;
             timeBeforeNextPhase = delay;
         }
@@ -370,12 +594,14 @@
                 return;
             }
 
+            isWorldScrolling = true;
+
             GetCurrentPhase().update(tickDelta);
 
         }
 
         // TODO
-        this.nextPhase(1000);
+        //this.nextPhase(1000);
         this.nextPhase(1);
 
         function GetCurrentPhase() {
@@ -408,6 +634,7 @@
     }
 
 
+    // Returns the distance between two points
     function CalculateDistance(x1, y1, x2, y2) {
         var a = x1 - x2;
         var b = y1 - y2;
@@ -416,7 +643,94 @@
     }
 
 
-    function Enemy(x, y, size, damage) {
+
+    function GoldObject(x, y) {
+
+        this.x = x;
+        this.y = y;
+
+        this.update = function (tickDelta, ctx) {
+
+            if (isWorldScrolling) this.y += 0.5;
+
+            // Destroy this object if it is outside the bounds of the world
+            if (this.y > gameHeight) {
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+                return;
+            }
+
+            let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
+
+            if (distanceToPlayer < 20) {
+
+                CollectGold(1);
+
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
+            let side = 0;
+            let size = 20;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + size * Math.cos(0), this.y + size * Math.sin(0));
+
+            for (side; side < 7; side++) {
+                ctx.lineTo(this.x + size * Math.cos(side * 2 * Math.PI / 6), this.y + size * Math.sin(side * 2 * Math.PI / 6));
+            }
+
+            ctx.fillStyle = "#ffb600";
+            ctx.fill();
+
+        }
+
+    }
+
+
+    function HealObject(x, y) {
+
+        this.x = x;
+        this.y = y;
+
+        this.update = function (tickDelta, ctx) {
+
+            if (isWorldScrolling) this.y += 0.5;
+
+            // Destroy this object if it is outside the bounds of the world
+            if (this.y > gameHeight) {
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+                return;
+            }
+
+            let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
+
+            if (distanceToPlayer < 20) {
+
+                HealPlayer(maxHealth);
+
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
+            let side = 0;
+            let size = 10;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + size * Math.cos(0), this.y + size * Math.sin(0));
+
+            for (side; side < 7; side++) {
+                ctx.lineTo(this.x + size * Math.cos(side * 2 * Math.PI / 6), this.y + size * Math.sin(side * 2 * Math.PI / 6));
+            }
+
+            ctx.fillStyle = "#2cff00";
+            ctx.fill();
+
+
+        }
+
+    }
+
+    function Enemy(x, y, size, damage, speed) {
 
         this.x = x;
         this.y = y;
@@ -424,13 +738,14 @@
         this.update = function (tickDelta, ctx) {
 
             if (this.y > gameHeight) {
-                // Destroy this object
+                // Destroy this object if it is outside the bounds of the world
                 worldObjects.splice(worldObjects.indexOf(this), 1);
+                return;
             }
 
             let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
 
-            if (distanceToPlayer < 20) {
+            if (distanceToPlayer < size) {
 
                 HitPlayer(damage);
 
@@ -445,7 +760,7 @@
             ctx.lineTo(this.x, this.y + size);
             ctx.fill();
 
-            this.y += tickDelta;
+            if (isWorldScrolling) this.y += tickDelta * speed;
 
 
         }
@@ -467,10 +782,11 @@
             if (this.y > gameHeight) {
                 // Destroy this object
                 worldObjects.splice(worldObjects.indexOf(this), 1);
+                return;
             }
 
             // Update position
-            this.y += tickDelta / 2;
+            if (isWorldScrolling) this.y += tickDelta / 2;
 
             let cercle = new Path2D();
             cercle.arc(this.x, this.y, radius, 0, 2 * Math.PI);
@@ -488,7 +804,7 @@
     function setDialog(text, color, font) {
         this.dialogText = font;
         this.dialogColor = color;
-        this.dialogText = "«" + text + "»";
+        this.dialogText = text;
     }
 
     function clearDialog() {
@@ -521,7 +837,22 @@
         var key = event.key || event.keyCode;
 
         if (key === 'Escape' || key === 'Esc' || key === 'Space') {
+            console.log("Pausing game");
             isGamePaused = !isGamePaused;
+
+            if (isGamePaused) {
+                ShowCursor(true);
+                music.pause();
+            } else {
+                ShowCursor(false);
+                music.play();
+            }
+
+        }
+
+        if (key === 'a') {
+            console.log("Skipping this phase");
+            phaseHandler.nextPhase(0);
         }
     });
 
@@ -535,6 +866,12 @@
         }
 
         myGameArea.clear();
+
+
+        if (!isGameStarted) {
+            return;
+        }
+
 
         if (myGameArea.x && myGameArea.y) {
             myGamePiece.x = myGameArea.x;

@@ -11,7 +11,6 @@ function toggleMusic() {
         console.log("Playing music...");
         audio.play();
 
-
         document.getElementById("stopMusic").src = "images/sound_on.png";
 
     } else {
