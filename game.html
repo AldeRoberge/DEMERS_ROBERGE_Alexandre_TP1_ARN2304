@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Jeux - S.T.A.R.S</title>
 
     <style>
         .game-canvas {
@@ -19,6 +19,25 @@
 <body onload="startGame()">
 
 
+
+<!--
+  _____ _______           _____     _____
+ / ____|__   __|  /\     |  __ \   / ____|
+| (___    | |    /  \    | |__) | | (___
+ \___ \   | |   / /\ \   |  _  /   \___ \
+ ____) |  | |_ / ____ \ _| | \ \ _ ____) |
+|_____(_) |_(_)_/    \_(_)_|  \_(_)_____/
+
+Surely
+This
+Acronym
+Reads
+S.T.A.R.S.
+
+https://en.wikipedia.org/wiki/Recursive_acronym
+
+-->
+
 <script>
 
     const worldObjects = [];
@@ -30,17 +49,17 @@
     const gameUpdateRate = 1;
 
     // Sounds
-    var hurtSound;
-    var healSound;
-    var deathSound;
-    var goldSound;
+    let hurtSound;
+    let healSound;
+    let deathSound;
+    let goldSound;
 
-    var music;
+    let music;
 
     let phaseHandler;
 
     // World scroll
-    var isWorldScrolling = true;
+    let isWorldScrolling = true;
 
     function startGame() {
         myGamePiece = new PlayerObject(gameWidth / 2, gameHeight / 2);
@@ -58,19 +77,19 @@
 
     }
 
-    var isGamePaused = false;
+    let isGamePaused = false;
 
-    var score = 0;
-    var scoreCountText;
+    let score = 0;
+    let scoreCountText;
 
-    var gold = 0;
-    var goldCoinsText;
+    let gold = 0;
+    let goldCoinsText;
 
     // Game is ended, player has no more health
-    var gameEnd = false;
+    let gameEnd = false;
 
-    var maxHealth = 20;
-    var currentHealth = 0;
+    const maxHealth = 20;
+    let currentHealth = 0;
 
     let drawHealthBar = false;
 
@@ -89,6 +108,8 @@
             gameEnd = true;
             ShowCursor(true);
             setDialog("");
+
+            music.pause();
         }
     }
 
@@ -97,6 +118,8 @@
         damageIndicator = 255;
 
         healSound.play();
+
+        drawHealthBar = true;
 
         currentHealth += heal;
 
@@ -117,6 +140,8 @@
 
     let isGameStarted = false;
 
+    let bypassTitleCard = false;
+
     function go() {
 
         if (!isGameStarted) {
@@ -125,22 +150,30 @@
 
             ShowCursor(false);
 
-            const showTextDelay = 1000;
+            const showTextDelay = 3500;
 
-            new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Perigno Maximus", "25px Georgia", "white", showTextDelay);
-            new UIText(gameWidth / 2, gameHeight / 1.85, "présentent", "20px Georgia", "white", showTextDelay);
+            new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Péquno Brouette", "25px Georgia", "white", showTextDelay);
+            new UIText(gameWidth / 2, gameHeight / 1.85, "PRÉSENTENT", "20px Georgia", "white", showTextDelay);
 
-            setTimeout(function () {
 
-                let textShowLength = showTextDelay * 1.5;
-
-                var text = new UIText(gameWidth / 2, gameHeight / 2, "S. T. A. R. S.", "40px Arial", "white", textShowLength);
-
+            if (bypassTitleCard) {
+                phaseHandler = new PhaseHandler();
+            } else {
                 setTimeout(function () {
-                    beginGame();
-                }, textShowLength);
 
-            }, showTextDelay);
+                    let textShowLength = showTextDelay * 1.5;
+
+                    new UIText(gameWidth / 2, gameHeight / 2, "S. T. Δ. R. S.", "50px Arial", "white", textShowLength / 1.5);
+                    new UIText(gameWidth / 2, gameHeight / 2 + 25, "L'ÉPREUVE GALACTIQUE", "15px Georgia", "white", textShowLength / 1.5);
+
+                    setTimeout(function () {
+                        beginGame();
+                    }, textShowLength + 1000);
+
+                }, showTextDelay + 1000);
+            }
+
+
 
 
 
@@ -167,10 +200,6 @@
             goldCoinsText.blink(false);
 
             phaseHandler = new PhaseHandler();
-
-            drawHealthBar = true;
-
-
         }, stopBlinkingTime);
     }
 
@@ -183,7 +212,6 @@
 
             this.canvas.width = gameWidth;
             this.canvas.height = gameHeight;
-
 
             this.context = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
@@ -273,7 +301,7 @@
 
         this.update = function (gameTick, ctx) {
 
-            losangeSize -= gameTick;
+            losangeSize -= gameTick / 2;
 
             if (losangeSize <= losangeEndSize) {
                 losangeSize = losangeEndSize;
@@ -369,7 +397,7 @@
 
     function StarSpawner() {
 
-        const spawnStarTime = 10;
+        const spawnStarTime = 5;
         let spawnStarIndex = 0;
 
         this.update = function (tickDelta) {
@@ -392,7 +420,7 @@
 
         this.start = function () {
             console.log("Started text phase...");
-            setDialog(text, font, textColor);
+            setDialog(text, textColor, font);
         }
 
         let tickIndex = 0;
@@ -416,7 +444,7 @@
         this.start = function () {
             console.log("Started intro phase...");
 
-            setDialog("Your mission stars now.", "13px Arial", "red");
+            setDialog("Votre mission débute à l'instant.", "green", "30px Arial");
         }
 
         let tickIndex = 0;
@@ -425,12 +453,10 @@
 
             tickIndex += tickDelta;
 
-            if (tickIndex > 1000) {
+            if (tickIndex > 2000) {
                 tickIndex = 0;
 
-                const x = GetRandomObjectSpawnPositionX();
-                worldObjects.push(new HealObject(x, -5));
-
+                worldObjects.push(new HealObject(gameWidth / 2, -5));
 
                 phaseHandler.nextPhase(1000);
 
@@ -480,7 +506,7 @@
         this.start = function () {
             console.log("Started easy phase...");
 
-            setDialog(message, color, "13px Arial");
+            setDialog(message, color, "30px Arial");
         }
 
         let tickIndex = 0;
@@ -560,13 +586,14 @@
         let currentPhaseIndex = -1;
 
         let phase0 = new IntroPhase(100, this);
-        let phase1 = new EasyPhase(100, this, 50, "Be warned of the dangers.", "green", 0.75, 30);
-        let phase2 = new TextPhase(this, "Good job!", "Red", "30px Arial", 3000);
-        let phase3 = new EasyPhase(100, this, 100, "You're doing good!", "yellow", 1, 20);
-        let phase4 = new EasyPhase(100, this, 100, "Keep going!", "orange", 1.5, 10);
-        let phase5 = new FeelMyWrathPhase(100, this, "FEEL MY WRATH!!!", "red", "30px Arial");
-        let phase6 = new RecompensePhase(10, 10, this);
-        let phase7 = new EasyPhase(100, this, 100, "Let's see...", "yellow", 1, 20);
+        let phase1 = new TextPhase(this, "  ", "Green", "30px Arial", 10);
+        let phase2 = new EasyPhase(100, this, 50, "Attention...", "white", 0.75, 150);
+        let phase3 = new EasyPhase(100, this, 100, "C'est bien!", "yellow", 1, 100);
+        let phase4 = new TextPhase(this, "Et si j'y vais comme ça?", "orange", "30px Arial", 10);
+        let phase5 = new EasyPhase(100, this, 100, "Yeah...", "orange", 1.5, 100);
+        let phase6 = new FeelMyWrathPhase(100, this, "FEEL MY WRATH!!!", "red", "30px Arial");
+        let phase7 = new RecompensePhase(10, 10, this);
+        let phase8 = new EasyPhase(100, this, 100, "Let's see...", "yellow", 1, 20);
 
         let isInBetweenPhases = false;
         let timeBeforeNextPhase = 0;
@@ -636,8 +663,8 @@
 
     // Returns the distance between two points
     function CalculateDistance(x1, y1, x2, y2) {
-        var a = x1 - x2;
-        var b = y1 - y2;
+        const a = x1 - x2;
+        const b = y1 - y2;
 
         return Math.sqrt(a * a + b * b);
     }
@@ -797,14 +824,24 @@
         }
     }
 
-    var dialogFont = "";
-    var dialogColor = "";
-    var dialogText = "";
+    let dialogFont = "";
+    let dialogColor = "";
+    let dialogText = "";
 
     function setDialog(text, color, font) {
-        this.dialogText = font;
-        this.dialogColor = color;
-        this.dialogText = text;
+
+        if (text) {
+            dialogText = text;
+        }
+
+        if (color) {
+            dialogColor = color;
+        }
+
+        if (font) {
+           dialogFont = font;
+        }
+
     }
 
     function clearDialog() {
@@ -834,7 +871,7 @@
             return;
         }
 
-        var key = event.key || event.keyCode;
+        const key = event.key || event.keyCode;
 
         if (key === 'Escape' || key === 'Esc' || key === 'Space') {
             console.log("Pausing game");
@@ -867,11 +904,34 @@
 
         myGameArea.clear();
 
-
         if (!isGameStarted) {
+
+            //jeu avec titre, description, musique et bouton “Démarrer”
+
+            context.textAlign = "center";
+            context.fillStyle = "white";
+            context.font = "50px Arial ";
+            context.fillStyle = "magenta";
+            context.fillText("S. T. Δ. R. S.", gameWidth / 2, gameHeight / 2);
+
+            context.textAlign = "center";
+            context.font = "31px Arial";
+
+            var gradient = context.createLinearGradient(0, 0, gameWidth, 0);
+            gradient.addColorStop(0.25,"blue");
+            gradient.addColorStop(0.50,"magenta");
+            gradient.addColorStop(0.75,"white");
+            context.fillStyle = gradient;
+            context.fillText("L'épreuve galactique", gameWidth / 2, gameHeight / 2 + 40);
+
+            context.textAlign = "center";
+            context.fillStyle = "gray";
+            context.font = "20px Arial";
+            context.fillText("CLIQUEZ POUR DÉMARRER", gameWidth / 2, gameHeight / 2 + 250);
+
+
             return;
         }
-
 
         if (myGameArea.x && myGameArea.y) {
             myGamePiece.x = myGameArea.x;
@@ -890,15 +950,17 @@
 
         if (gameEnd) {
 
+
+
             context.beginPath();
 
             context.textAlign = "center";
             context.fillStyle = "red";
             context.font = "20px Arial";
-            context.fillText("GAME OVER", gameWidth / 2, gameHeight / 2 - 20);
+            context.fillText("MISSION ÉCHOUÉE", gameWidth / 2, gameHeight / 2 - 20);
 
             context.font = "13px Arial";
-            context.fillText("Score : " + score, gameWidth / 2, gameHeight / 2);
+            context.fillText("Pointage : " + score, gameWidth / 2, gameHeight / 2);
 
             return;
         }
