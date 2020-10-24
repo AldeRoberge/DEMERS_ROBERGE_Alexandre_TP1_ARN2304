@@ -189,10 +189,10 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         const stopBlinkingTime = 800;
 
         // Shows the score
-        goldCoinsText = new UIText(gameWidth - 100, 50, "Gold : " + gold, "30px Arial", "white", -1);
+        goldCoinsText = new UIText(gameWidth - 100, 50, "Balles : " + gold, "30px Arial", "white", -1);
         goldCoinsText.blink(true);
 
-        scoreCountText = new UIText(100, 50, "Score : " + score, "30px Arial", "white", -1);
+        scoreCountText = new UIText(100, 50, "Points : " + score, "30px Arial", "white", -1);
         scoreCountText.blink(true);
 
         setTimeout(function () {
@@ -431,7 +431,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             if (tickIndex > time) {
                 clearDialog();
-                phaseHandler.nextPhase(1000);
+                phaseHandler.nextPhase();
             }
         }
 
@@ -443,8 +443,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         this.start = function () {
             console.log("Started intro phase...");
-
-            setDialog("Votre mission débute à l'instant.", "green", "30px Arial");
+            setDialog(" ", "green", "30px Arial");
         }
 
         let tickIndex = 0;
@@ -587,13 +586,14 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         let phase0 = new IntroPhase(100, this);
         let phase1 = new TextPhase(this, "  ", "Green", "30px Arial", 10);
-        let phase2 = new EasyPhase(100, this, 50, "Attention...", "white", 0.75, 150);
-        let phase3 = new EasyPhase(100, this, 100, "C'est bien!", "yellow", 1, 100);
-        let phase4 = new TextPhase(this, "Et si j'y vais comme ça?", "orange", "30px Arial", 10);
-        let phase5 = new EasyPhase(100, this, 100, "Yeah...", "orange", 1.5, 100);
-        let phase6 = new FeelMyWrathPhase(100, this, "FEEL MY WRATH!!!", "red", "30px Arial");
-        let phase7 = new RecompensePhase(10, 10, this);
-        let phase8 = new EasyPhase(100, this, 100, "Let's see...", "yellow", 1, 20);
+        let phase2 = new EasyPhase(100, this, 50, "  ", "white", 0.75, 300);
+        let phase3 = new TextPhase(this, "Pas mal du tout!", "Green", "30px Arial", 2000);
+        let phase4 = new EasyPhase(100, this, 100, "C'est bien!", "yellow", 1, 100);
+        let phase5 = new TextPhase(this, "", "orange", "30px Arial", 10);
+        let phase6 = new EasyPhase(100, this, 100, "Et si j'y vais comme ça?", "orange", 1.5, 100);
+        let phase7 = new FeelMyWrathPhase(100, this, "FEEL MY WRATH!!!", "red", "30px Arial");
+        let phase8 = new RecompensePhase(10, 10, this);
+        let phase9 = new EasyPhase(100, this, 100, "Let's see...", "yellow", 1, 20);
 
         let isInBetweenPhases = false;
         let timeBeforeNextPhase = 0;
@@ -832,6 +832,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         if (text) {
             dialogText = text;
+        } else
+        {
+            dialogText = "  ";
         }
 
         if (color) {
@@ -939,10 +942,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
 
         if (goldCoinsText && scoreCountText) {
-            goldCoinsText.setText("Gold : " + gold);
-            scoreCountText.setText("Score : " + score);
+            goldCoinsText.setText("Balles : " + gold);
+            scoreCountText.setText("Points : " + score);
         }
-
 
         if (lastUpdateTime === 2) {
             console.log("Updating " + worldObjects.length + " objects with time delta " + lastUpdateTime);
