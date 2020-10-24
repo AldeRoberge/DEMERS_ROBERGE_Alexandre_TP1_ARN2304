@@ -72,7 +72,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     let myGamePiece;
 
-    let objectSpawner;
+    let starSpawner;
 
     const gameUpdateRate = 1;
 
@@ -101,7 +101,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         myGameArea.start();
 
-        objectSpawner = new StarSpawner();
+        starSpawner = new StarSpawner();
 
         /**
          * All sounds were generated using https://www.bfxr.net/
@@ -142,7 +142,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     let isGameEnded = false;
     let isGameEndedFail = false;
 
-    const maxHealth = 20;
+    const maxHealth = 10;
     let currentHealth = 0;
 
     let drawHealthBar = false;
@@ -198,15 +198,16 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         ammoCollectSound.play();
     }
 
-
     window.addEventListener("click", go);
 
     let isGameStarted = false;
 
-    let skipTitleCard = true;
+    // Skips the title card
+    let skipTitleCard = false;
 
     function go() {
 
+        // User has clicked on the screen (new chrome version blocks autoplay)
         if (!isGameStarted) {
 
             isGameStarted = true;
@@ -232,7 +233,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                     let textShowLength = showTextDelay * 1.5;
 
                     new UIText(gameWidth / 2, gameHeight / 2, "S. T. Δ. R. S.", "75px Segoe UI", "white", textShowLength / 1.5);
-                    new UIText(gameWidth / 2, gameHeight / 2 + 25, "L'ÉPREUVE GALACTIQUE", "25px Segoe UI", "white", textShowLength / 1.5);
+                    new UIText(gameWidth / 2, gameHeight / 2 + 30, "L'ÉPREUVE GALACTIQUE", "25px Segoe UI", "white", textShowLength / 1.5);
 
                     setTimeout(function () {
                         beginGame(false);
@@ -388,6 +389,11 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         this.Shoot = function () {
 
+
+            if (isGameEnded) {
+                return;
+            }
+
             if (bullets > 0) {
                 bullets--;
 
@@ -519,11 +525,21 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     function StarSpawner() {
 
-        const spawnStarTime = 5;
+        let spawnStarTime = 3000;
         let spawnStarIndex = 0;
+
+
+
+
 
         this.update = function (tickDelta) {
             spawnStarIndex += tickDelta;
+
+            spawnStarTime -= 1;
+
+            if (spawnStarTime < 5) {
+                spawnStarTime = 5;
+            }
 
             if (spawnStarIndex > spawnStarTime) {
 
@@ -603,8 +619,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
                 const x = GetRandomObjectSpawnPositionX();
 
-
-                worldObjects.push(new HealObject(x, -10));
+                worldObjects.push(new HealObject(x, -30 * Math.random()));
             }
 
             // Spawn bullets obj
@@ -846,7 +861,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         let phase5 = new FeelMyWrathPhase(100, this, "C'EST TA FIN!!!", "red", "30px Arial");
         let phase6 = new RecompensePhase(0, 0, 1, this);
         let phase7 = new WallPhase(10, 0.25, 2);
-        let phase8 = new RecompensePhase(10, 10, 10, this)
+        let phase8 = new RecompensePhase(0, 10, 1, this)
         let phase9 = new BossPhase(this);
         let phase10 = new VictoryPhase();
 
@@ -1129,7 +1144,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         this.x = x;
         this.y = y;
 
-        this.maxHealth = 5;
+        this.maxHealth = 8;
         this.currentHealth = this.maxHealth;
 
         this.finalY = finalY;
@@ -1146,15 +1161,19 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             console.log("Damagin! Current health : " + this.currentHealth);
 
-            if (this.currentHealth > 20) {
-                setDialog("ARRGGGHHHH!!!", "red");
-            } else if (this.currentHealth > 15) {
-                setDialog("FINI!!!!!!", "red");
-            } else if (this.currentHealth > 10) {
-                setDialog("L'UNIVERS M'APPARTIENT", "red");
-            }else if (this.currentHealth > 10) {
-                setDialog("JE SUIS LE SEUL À POUVOIR TE BATTRE", "red");
+            if (this.currentHealth > 7) {
+                setDialog("TA FIN", "red");
+            } else  if (this.currentHealth > 6) {
+                setDialog("EST PROCHE!!!", "red");
             } else if (this.currentHealth > 5) {
+                setDialog("JE TE DIT!", "red");
+            } else if (this.currentHealth > 4) {
+                setDialog("FINI!!!!!!", "red");
+            } else if (this.currentHealth > 3) {
+                setDialog("L'UNIVERS M'APPARTIENT", "red");
+            }else if (this.currentHealth > 2) {
+                setDialog("JE SUIS LE SEUL À POUVOIR TE BATTRE", "red");
+            } else if (this.currentHealth > 1) {
                 setDialog("SALE VERMINE", "red");
             } else if (this.currentHealth <= 0) {
 
