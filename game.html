@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Jeux - S.T.A.R.S</title>
 
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+
     <style>
         .game-canvas {
             border: 1px solid #d3d3d3;
@@ -18,6 +20,26 @@
 </head>
 <body onload="startGame()">
 
+
+<br>
+<br>
+
+<div class="center credits">
+
+    <h3>Utilisation</h3>
+
+    <p>Souris = bouger dans le monde</p>
+    <p>M = rendre la musique en sourdine</p>
+
+    <h3>Débug</h3>
+    <p>A = Skipper le niveau</p>
+
+    <br>
+
+    <p>2020 - Les Jeux Pequno Brouette</p>
+
+
+</div>
 
 
 <!--
@@ -49,10 +71,15 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     const gameUpdateRate = 1;
 
     // Sounds
+    let shieldSound;
     let hurtSound;
     let healSound;
     let deathSound;
     let goldSound;
+
+    let enemyDestroySound;
+
+    let shootSound;
 
     let music;
 
@@ -68,10 +95,15 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         objectSpawner = new StarSpawner();
 
+        shieldSound = new Audio("audio/shield.wav");
         hurtSound = new Audio("audio/hurt.wav");
         healSound = new Audio("audio/heal.wav");
         goldSound = new Audio("audio/gold.wav");
         deathSound = new Audio("audio/death.wav");
+
+        enemyDestroySound = new Audio("audio/enemyDestroySound.wav");
+
+        shootSound = new Audio("audio/shoot.wav");
 
         music = new Audio("audio/music.mp3");
 
@@ -85,8 +117,15 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     let gold = 0;
     let goldCoinsText;
 
+    let level = 0;
+    let levelText;
+
+
+    let debug = "";
+    let debugText;
+
     // Game is ended, player has no more health
-    let gameEnd = false;
+    let isGameEnded = false;
 
     const maxHealth = 20;
     let currentHealth = 0;
@@ -99,13 +138,18 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     // The player is hurt / damaged
     function HitPlayer(damage) {
         damageIndicator = 0; // See Player update method
-        currentHealth -= damage;
+
+        if (isPlayerShielded) {
+            isPlayerShielded = false;
+        } else {
+            currentHealth -= damage;
+        }
 
         hurtSound.play();
 
         if (currentHealth < 0) {
             deathSound.play();
-            gameEnd = true;
+            isGameEnded = true;
             ShowCursor(true);
             setDialog("");
 
@@ -135,72 +179,90 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     }
 
 
-
     window.addEventListener("click", go);
 
     let isGameStarted = false;
 
-    let bypassTitleCard = false;
+    let skipTitleCard = true;
 
     function go() {
 
+
+
+
         if (!isGameStarted) {
+
+
+
+
             isGameStarted = true;
             music.play();
+
 
             ShowCursor(false);
 
             const showTextDelay = 3500;
 
-            new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Péquno Brouette", "25px Georgia", "white", showTextDelay);
-            new UIText(gameWidth / 2, gameHeight / 1.85, "PRÉSENTENT", "20px Georgia", "white", showTextDelay);
+            new UIText(gameWidth / 2, gameHeight / 2, "Les Jeux Péquno Brouette", "25px Segoe UI", "white", showTextDelay);
+            new UIText(gameWidth / 2, gameHeight / 1.85, "PRÉSENTENT", "20px Segoe UI", "white", showTextDelay);
 
 
-            if (bypassTitleCard) {
+            // Debug
+            debugText = new UIText(gameWidth / 2, 200, "Debug : " + debug, "20px Arial", "white", -1);
+
+            if (skipTitleCard) {
                 phaseHandler = new PhaseHandler();
+                beginGame(true);
             } else {
                 setTimeout(function () {
 
                     let textShowLength = showTextDelay * 1.5;
 
-                    new UIText(gameWidth / 2, gameHeight / 2, "S. T. Δ. R. S.", "50px Arial", "white", textShowLength / 1.5);
-                    new UIText(gameWidth / 2, gameHeight / 2 + 25, "L'ÉPREUVE GALACTIQUE", "15px Georgia", "white", textShowLength / 1.5);
+                    new UIText(gameWidth / 2, gameHeight / 2, "S. T. Δ. R. S.", "75px Segoe UI", "white", textShowLength / 1.5);
+                    new UIText(gameWidth / 2, gameHeight / 2 + 25, "L'ÉPREUVE GALACTIQUE", "25px Segoe UI", "white", textShowLength / 1.5);
 
                     setTimeout(function () {
-                        beginGame();
+                        beginGame(false);
                     }, textShowLength + 1000);
 
                 }, showTextDelay + 1000);
             }
 
 
-
-
-
         }
-
 
 
     }
 
 
-    function beginGame() {
+    function beginGame(isSkipTitle) {
 
         const stopBlinkingTime = 800;
 
         // Shows the score
-        goldCoinsText = new UIText(gameWidth - 100, 50, "Balles : " + gold, "30px Arial", "white", -1);
+        goldCoinsText = new UIText(gameWidth - 100, 50, "Balles : " + gold, "30px Segoe UI", "white", -1);
         goldCoinsText.blink(true);
 
-        scoreCountText = new UIText(100, 50, "Points : " + score, "30px Arial", "white", -1);
+        scoreCountText = new UIText(100, 50, "Points : " + score, "30px Segoe UI", "white", -1);
         scoreCountText.blink(true);
+
+        levelText = new UIText(gameWidth / 2, 50, "Niveau : " + level, "20px Segoe UI", "white", -1);
+        levelText.blink(true);
 
         setTimeout(function () {
             scoreCountText.blink(false);
             goldCoinsText.blink(false);
+            levelText.blink(false);
 
-            phaseHandler = new PhaseHandler();
+            if (!isSkipTitle) {
+                phaseHandler = new PhaseHandler();
+            }
+
         }, stopBlinkingTime);
+    }
+
+    function setDebug(text) {
+        debug = text;
     }
 
     var gameWidth = 1200;
@@ -208,7 +270,11 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     var myGameArea = {
         canvas: document.createElement("canvas"),
+
+
         start: function () {
+
+            myGameArea.canvas.setAttribute('class', 'center')
 
             this.canvas.width = gameWidth;
             this.canvas.height = gameHeight;
@@ -288,7 +354,21 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     }
 
+
+
+
+
+    let previousX = 0;
+    let playerXOffset = 0;
+
+    let previousY = 0;
+    let playerYOffset = 0;
+
+
     function PlayerObject(x, y) {
+
+
+        this.name = "Player";
 
         // The final size of the player
         let losangeEndSize = 20;
@@ -298,6 +378,18 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         this.x = x;
         this.y = y;
+
+        this.Shoot = function() {
+
+            if (gold > 0){
+                gold--;
+
+                shootSound.play();
+                worldObjects.push(new BulletObject(myGamePiece.x, myGamePiece.y,  1));
+            } else {
+                console.log("Does not have enough gold...");
+            }
+        }
 
         this.update = function (gameTick, ctx) {
 
@@ -315,8 +407,11 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             ctx.fillStyle = "rgb(255," + damageIndicator + "," + damageIndicator + ")";
 
-
             // LIMIT THE X AND Y SO THE PLAYER DOES NOT GO AWAY FROM THE CANVAS
+
+            /**
+             * YOU'RE BOUND TO THIS PRISON SHELL, SLAVE
+             */
 
             // Clamp X
             if (this.x < 20) {
@@ -332,11 +427,12 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                 this.y = gameHeight - 20;
             }
 
-            /**
-             *
-             * YOU'RE BOUND TO THIS PRISON SHELL, SLAVE
-             *
-             */
+            // Calculate offset (to move the stars)
+            playerXOffset = previousX - this.x;
+            previousX = this.x;
+
+            playerYOffset = previousY - this.y;
+            previousY = this.y;
 
             ctx.beginPath();
             ctx.moveTo(this.x, this.y - losangeSize);
@@ -378,7 +474,6 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             ctx.lineTo(this.x, this.y + losangeSize);
             ctx.fill();
 
-
             // Draw the healthbar
             if (drawHealthBar) {
                 const sizeFactor = 2;
@@ -389,8 +484,28 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
                 ctx.fillStyle = "green";
                 ctx.fillRect(this.x - barSize / 2, this.y + losangeSize * 2.5, currentHealth * sizeFactor, 10);
+
+
+                ctx.beginPath();
+
+                ctx.textAlign = "center";
+                ctx.fillStyle = "white";
+                ctx.font = "bold 10px Arial";
+                ctx.fillText(currentHealth, this.x, this.y + 58);
+
             }
 
+            //Draw the player shield
+            if (isPlayerShielded) {
+
+                let shieldRadius = 50;
+
+                let cercle = new Path2D();
+                cercle.arc(this.x, this.y + 20, shieldRadius, 0, 2 * Math.PI);
+
+                ctx.fillStyle = "rgb(0,255,217, 0.25)";
+                ctx.fill(cercle);
+            }
 
         }
     }
@@ -404,19 +519,25 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             spawnStarIndex += tickDelta;
 
             if (spawnStarIndex > spawnStarTime) {
-                spawnStarIndex = 0;
 
-                const starRadius = 1;
-                const x = Math.random() * gameWidth;
-                const y = -(starRadius / 2);
-                worldObjects.push(new Star(x, y, starRadius));
+                // Dont stack-spawn stars if the world isnt scrolling
+                if (isWorldScrolling) {
+
+                    spawnStarIndex = 0;
+
+                    const starRadius = 1;
+                    const x = Math.random() * gameWidth;
+                    const y = -(starRadius / 2);
+                    worldObjects.push(new StarObject(x, y, starRadius));
+                }
+
             }
         }
 
         worldObjects.push(this);
     }
 
-    function TextPhase(phaseHandler, text, textColor, font, time) {
+    function TextPhase(phaseHandler, text, textColor, font, time, delay) {
 
         this.start = function () {
             console.log("Started text phase...");
@@ -431,13 +552,11 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             if (tickIndex > time) {
                 clearDialog();
-                phaseHandler.nextPhase();
+                phaseHandler.nextPhase(delay);
             }
         }
 
-
     }
-
 
     function IntroPhase(enemies, phaseHandler, text, textColor, font) {
 
@@ -455,7 +574,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             if (tickIndex > 2000) {
                 tickIndex = 0;
 
-                worldObjects.push(new HealObject(gameWidth / 2, -5));
+                worldObjects.push(new HealObject(gameWidth / 2 - 20, -5));
+
+
 
                 phaseHandler.nextPhase(1000);
 
@@ -463,7 +584,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
     }
 
-    function RecompensePhase(heal, gold, phaseHandler) {
+    function RecompensePhase(heal, gold, shield, phaseHandler) {
 
         this.start = function () {
             console.log("Started recompense phase...");
@@ -471,26 +592,35 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         this.update = function (tickDelta) {
 
-            isWorldScrolling = false;
 
-            heal--;
-            gold--;
-
+            // Spawn healing obj
             if (heal > 0) {
-                const x = GetRandomObjectSpawnPositionX();
-                const y = GetRandomObjectSpawnPositionY();
+                heal--;
 
-                worldObjects.push(new HealObject(x, y));
+                const x = GetRandomObjectSpawnPositionX();
+
+
+                worldObjects.push(new HealObject(x, -10));
             }
 
+            // Spawn gold obj
             if (gold > 0) {
-                const x = GetRandomObjectSpawnPositionX();
-                const y = GetRandomObjectSpawnPositionY();
+                gold--;
 
-                worldObjects.push(new GoldObject(x, y));
+                const x = GetRandomObjectSpawnPositionX();
+
+                worldObjects.push(new GoldObject(x, -10));
             }
 
-            if (heal < 0 && gold < 0) {
+            // Spawn shield obj
+            if (shield > 0) {
+                shield--;
+
+                worldObjects.push(new ShieldObject(gameWidth / 2 + 20, -5));
+            }
+
+            // No more power-ups
+            if (heal === 0 && gold === 0 && shield === 0) {
                 setDialog("")
 
                 phaseHandler.nextPhase(2000);
@@ -500,7 +630,70 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     }
 
 
-    function EasyPhase(enemies, phaseHandler, spawnTime, message, color, enemySpeed, waveLength) {
+    function WallPhase(endAfterNumberOfBeats) {
+
+        this.start = function () {
+            console.log("Started wall phase...");
+        }
+
+        let beatIndex = 0;
+        let isBeat = false;
+
+        this.update = function (tickDelta) {
+
+            score++;
+
+            function SpawnWall() {
+
+                console.log("Spawning wall...");
+
+                beatIndex++;
+
+                if (beatIndex > endAfterNumberOfBeats) {
+                    phaseHandler.nextPhase(0);
+                }
+
+                let enemyCount = 30;
+
+                let enemiesPos = gameWidth / enemyCount;
+
+                let holeIndex = Math.floor(Math.random() * enemyCount);
+
+                console.log("Hole index is " + holeIndex);
+
+                let currentEnemyPos = 0;
+
+                for (let i = 0; i < enemyCount; i++) {
+
+                    currentEnemyPos += enemiesPos;
+
+                    // Skip hole
+                    if (i === holeIndex) {
+                        continue;
+                    }
+
+                    console.log("Spawning enemy at (" + currentEnemyPos + ", -20)");
+
+                    worldObjects.push(new EnemyObject(currentEnemyPos, -20, 20, 1, 0.50));
+
+
+                }
+            }
+
+            if (beatFlip && !isBeat) {
+                isBeat = true;
+                SpawnWall();
+            } else if (!beatFlip && isBeat) {
+                isBeat = false;
+                SpawnWall();
+            }
+
+
+        }
+    }
+
+
+    function EasyPhase(enemies, phaseHandler, spawnTime, message, color, enemySpeed, waveLength, delay) {
 
         this.start = function () {
             console.log("Started easy phase...");
@@ -514,6 +707,8 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         this.update = function (tickDelta) {
 
+            score++;
+
             tickIndex += tickDelta;
 
             if (tickIndex > spawnTime) {
@@ -523,19 +718,34 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                 tickIndex = 0;
 
                 const x = GetRandomObjectSpawnPositionX();
-                worldObjects.push(new Enemy(x, -20, 20, 1, enemySpeed));
+                worldObjects.push(new EnemyObject(x, -20, 20, 1, enemySpeed));
             }
 
             if (tickCount > waveLength) {
                 setDialog("")
-                phaseHandler.nextPhase(500);
+                phaseHandler.nextPhase(delay);
             }
 
         }
     }
 
     function GetRandomObjectSpawnPositionX() {
-        return Math.random() * gameWidth;
+
+        let ret = Math.random() * gameWidth;
+
+        let clampLimit = 10;
+
+        // Clamp to left
+        if (ret < clampLimit) {
+            ret = clampLimit;
+        }
+
+        // Clamp to right
+        if (ret > gameWidth -clampLimit) {
+            return gameWidth - clampLimit;
+        }
+
+        return ret;
     }
 
     function GetRandomObjectSpawnPositionY() {
@@ -568,12 +778,10 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                 tickIndex = 0;
 
                 const x = GetRandomObjectSpawnPositionX();
-                worldObjects.push(new Enemy(x, -5, 10, 1, 1));
+                worldObjects.push(new EnemyObject(x, -5, 10, 1, 1));
             }
 
             if (tickCount > 1000) {
-
-
                 phaseHandler.nextPhase(1000);
             }
 
@@ -585,20 +793,21 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         let currentPhaseIndex = -1;
 
         let phase0 = new IntroPhase(100, this);
-        let phase1 = new TextPhase(this, "  ", "Green", "30px Arial", 10);
-        let phase2 = new EasyPhase(100, this, 50, "  ", "white", 0.75, 300);
-        let phase3 = new TextPhase(this, "Pas mal du tout!", "Green", "30px Arial", 2000);
-        let phase4 = new EasyPhase(100, this, 100, "C'est bien!", "yellow", 1, 100);
-        let phase5 = new TextPhase(this, "", "orange", "30px Arial", 10);
-        let phase6 = new EasyPhase(100, this, 100, "Et si j'y vais comme ça?", "orange", 1.5, 100);
-        let phase7 = new FeelMyWrathPhase(100, this, "FEEL MY WRATH!!!", "red", "30px Arial");
-        let phase8 = new RecompensePhase(10, 10, this);
-        let phase9 = new EasyPhase(100, this, 100, "Let's see...", "yellow", 1, 20);
+        let phase1 = new TextPhase(this, "  ", "Green", "30px Arial", 10, 1000);
+        let phase2 = new EasyPhase(100, this, 50, "  ", "white", 0.75, 300, 500);
+        let phase3 = new TextPhase(this, "Pas mal du tout!", "Green", "30px Arial", 2500, 400);
+        let phase4 = new EasyPhase(100, this, 100, "Et si j'y vais comme ça?", "orange", 1.5, 200, 0);
+        let phase5 = new FeelMyWrathPhase(100, this, "C'EST TA FIN!!!", "red", "30px Arial");
+        let phase6 = new RecompensePhase(0, 0, 1, this);
+        let phase7 = new WallPhase(10);
+        let phase8 = new RecompensePhase(1, 10, 0, this);
 
         let isInBetweenPhases = false;
         let timeBeforeNextPhase = 0;
 
         this.nextPhase = function (delay) {
+            level++;
+
             setDialog("");
             isInBetweenPhases = true;
             timeBeforeNextPhase = delay;
@@ -654,6 +863,12 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                 case 6:
                     return phase6;
 
+                case 7:
+                    return phase7;
+
+                case 8:
+                    return phase8;
+
             }
         }
 
@@ -670,8 +885,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     }
 
 
-
     function GoldObject(x, y) {
+
+        this.name = "Gold";
 
         this.x = x;
         this.y = y;
@@ -696,25 +912,73 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                 worldObjects.splice(worldObjects.indexOf(this), 1);
             }
 
-            let side = 0;
-            let size = 20;
-
-            ctx.beginPath();
-            ctx.moveTo(this.x + size * Math.cos(0), this.y + size * Math.sin(0));
-
-            for (side; side < 7; side++) {
-                ctx.lineTo(this.x + size * Math.cos(side * 2 * Math.PI / 6), this.y + size * Math.sin(side * 2 * Math.PI / 6));
-            }
-
-            ctx.fillStyle = "#ffb600";
-            ctx.fill();
+            DrawHexagon(ctx, this.x, this.y, 20, "#ffb600");
 
         }
 
     }
 
+    let isPlayerShielded = false;
+
+    function ShieldPlayer() {
+
+        shieldSound.play();
+
+        isPlayerShielded = true;
+    }
+
+    function ShieldObject(x, y) {
+
+        this.name = "Shield";
+
+        this.x = x;
+        this.y = y;
+
+        this.update = function (tickDelta, ctx) {
+
+            if (isWorldScrolling) this.y += 0.5;
+
+            // Destroy this object if it is outside the bounds of the world
+            if (this.y > gameHeight) {
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+                return;
+            }
+
+            let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
+
+            if (distanceToPlayer < 20) {
+
+                ShieldPlayer();
+
+                // Destroy this object
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+            }
+
+            let size = 10;
+            let fillStyle = "#0028ff";
+
+            DrawHexagon(ctx, this.x, this.y, size, fillStyle);
+
+        }
+
+    }
+
+    // Draws an exagon
+    function DrawHexagon(ctx, x, y, size, fillStyle) {
+        ctx.beginPath();
+        ctx.moveTo(x + size * Math.cos(0), y + size * Math.sin(0));
+
+        for (let side = 0; side < 7; side++) {
+            ctx.lineTo(x + size * Math.cos(side * 2 * Math.PI / 6), y + size * Math.sin(side * 2 * Math.PI / 6));
+        }
+
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+    }
 
     function HealObject(x, y) {
+
+        this.name = "Heal";
 
         this.x = x;
         this.y = y;
@@ -739,28 +1003,69 @@ https://en.wikipedia.org/wiki/Recursive_acronym
                 worldObjects.splice(worldObjects.indexOf(this), 1);
             }
 
-            let side = 0;
-            let size = 10;
-
-            ctx.beginPath();
-            ctx.moveTo(this.x + size * Math.cos(0), this.y + size * Math.sin(0));
-
-            for (side; side < 7; side++) {
-                ctx.lineTo(this.x + size * Math.cos(side * 2 * Math.PI / 6), this.y + size * Math.sin(side * 2 * Math.PI / 6));
-            }
-
-            ctx.fillStyle = "#2cff00";
-            ctx.fill();
+            DrawHexagon(ctx, this.x, this.y, 10, "#2cff00");
 
 
         }
 
     }
 
-    function Enemy(x, y, size, damage, speed) {
+
+    function BulletObject(x, y, speed) {
+
+        this.name = "Bullet";
 
         this.x = x;
         this.y = y;
+
+        this.update = function (tickDelta, ctx) {
+
+            if (this.y < 0) {
+
+                console.log("Bullet was outside of this world.")
+
+                // Destroy this object if it is outside the bounds of the world
+                worldObjects.splice(worldObjects.indexOf(this), 1);
+                return;
+            }
+
+            for (let obj in worldObjects) {
+                if (obj.name === "Enemy") {
+
+                    if (CalculateDistance(this.x, this.y, obj.x, obj.y) < 10) {
+                        obj.damage(10);
+
+                        console.log("Collision with enemy");
+
+                        worldObjects.splice(worldObjects.indexOf(this), 1);
+                        return;
+                    }
+                }
+            }
+
+            // Draw the star
+            let cercle = new Path2D();
+            cercle.arc(this.x, this.y, 2, 0, 2 * Math.PI);
+
+            ctx.fillStyle = "gray";
+            ctx.fill(cercle);
+            if (isWorldScrolling) this.y -= tickDelta * speed;
+
+        }
+
+    }
+
+    function EnemyObject(x, y, size, damage, speed) {
+
+        this.name = "Enemy";
+
+        this.x = x;
+        this.y = y;
+
+        this.damage = function () {
+            enemyDestroySound.play();
+            worldObjects.splice(worldObjects.indexOf(this), 1);
+        }
 
         this.update = function (tickDelta, ctx) {
 
@@ -796,7 +1101,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
 
     // A star is an aesthetic object
-    function Star(x, y, radius) {
+    function StarObject(x, y, radius) {
+
+        this.name = "Star";
 
         this.radius = radius;
 
@@ -813,12 +1120,19 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             }
 
             // Update position
-            if (isWorldScrolling) this.y += tickDelta / 2;
+            if (isWorldScrolling) {
+                this.y += tickDelta / 2;
 
+                // Offset according to player pos'
+                this.x -= playerXOffset / 90;
+                this.y -= playerYOffset / 90;
+            }
+
+            // Draw the star
             let cercle = new Path2D();
             cercle.arc(this.x, this.y, radius, 0, 2 * Math.PI);
 
-            context.fillStyle = "white";
+            context.fillStyle = "gray";
             context.fill(cercle);
 
         }
@@ -828,12 +1142,12 @@ https://en.wikipedia.org/wiki/Recursive_acronym
     let dialogColor = "";
     let dialogText = "";
 
+    // Shows a dialog at the bottom of the screen
     function setDialog(text, color, font) {
 
         if (text) {
             dialogText = text;
-        } else
-        {
+        } else {
             dialogText = "  ";
         }
 
@@ -842,15 +1156,17 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
 
         if (font) {
-           dialogFont = font;
+            dialogFont = font;
         }
 
     }
 
+    // No dialog to be displayed
     function clearDialog() {
-        this.dialogText = "";
+        dialogText = "";
     }
 
+    // Draws the dialog (every frame)
     function drawDialogView(ctx) {
 
         if (dialogText) {
@@ -868,7 +1184,18 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     let beginRender = new Date();
 
+    let isMusicPaused = false;
 
+
+    window.addEventListener('mousedown', function (event) {
+
+        console.log("Shooting!");
+
+        myGamePiece.Shoot();
+
+    });
+
+    // Register key input
     window.addEventListener('keyup', function (event) {
         if (event.defaultPrevented) {
             return;
@@ -876,16 +1203,30 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         const key = event.key || event.keyCode;
 
+        if (key === 'm' || key === 'M') {
+
+            if (!isMusicPaused) {
+                music.volume = 0;
+                isMusicPaused = true;
+            } else {
+                music.volume = 1;
+                isMusicPaused = false;
+            }
+
+        }
+
         if (key === 'Escape' || key === 'Esc' || key === 'Space') {
             console.log("Pausing game");
             isGamePaused = !isGamePaused;
 
-            if (isGamePaused) {
-                ShowCursor(true);
-                music.pause();
-            } else {
-                ShowCursor(false);
-                music.play();
+            if (!isGameEnded) {
+                if (isGamePaused) {
+                    ShowCursor(true);
+                    music.pause();
+                } else {
+                    ShowCursor(false);
+                    music.play();
+                }
             }
 
         }
@@ -895,6 +1236,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             phaseHandler.nextPhase(0);
         }
     });
+
+    let beatFlip = false;
+    let beatCount = 0;
 
     // Updates the game
     function updateGameArea() {
@@ -921,9 +1265,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             context.font = "31px Arial";
 
             var gradient = context.createLinearGradient(0, 0, gameWidth, 0);
-            gradient.addColorStop(0.25,"blue");
-            gradient.addColorStop(0.50,"magenta");
-            gradient.addColorStop(0.75,"white");
+            gradient.addColorStop(0.25, "blue");
+            gradient.addColorStop(0.50, "magenta");
+            gradient.addColorStop(0.75, "white");
             context.fillStyle = gradient;
             context.fillText("L'épreuve galactique", gameWidth / 2, gameHeight / 2 + 40);
 
@@ -933,8 +1277,17 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             context.fillText("CLIQUEZ POUR DÉMARRER", gameWidth / 2, gameHeight / 2 + 250);
 
 
+
+            // Mute
+            context.textAlign = "center";
+            context.fillStyle = "rgb(48,48,48)";
+            context.font = "15px Arial";
+            context.fillText("M pour rendre la musique en sourdine", gameWidth / 2, gameHeight - 20);
+
+
             return;
         }
+
 
         if (myGameArea.x && myGameArea.y) {
             myGamePiece.x = myGameArea.x;
@@ -944,14 +1297,12 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         if (goldCoinsText && scoreCountText) {
             goldCoinsText.setText("Balles : " + gold);
             scoreCountText.setText("Points : " + score);
+            levelText.setText("Niveau : " + level);
+            debugText.setText("Debug : " + debug);
         }
 
-        if (lastUpdateTime === 2) {
-            console.log("Updating " + worldObjects.length + " objects with time delta " + lastUpdateTime);
-        }
 
-        if (gameEnd) {
-
+        if (isGameEnded) {
 
 
             context.beginPath();
@@ -992,6 +1343,22 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         //console.log("render : " + endRender.getMilliseconds() + ", " + beginRender.getMilliseconds())
 
         beginRender = new Date();
+
+        beatCount += 1;
+
+        // Counts the beat in the song
+        if (beatCount > 166.75) {
+            beatCount = 0;
+
+            beatFlip = beatFlip !== true;
+
+            // Time the console logs to the sound of the music :)
+            console.log("Updating " + worldObjects.length + " objects with time delta " + lastUpdateTime);
+
+        }
+
+        setDebug(beatFlip + ", " + beatCount);
+
 
     }
 
