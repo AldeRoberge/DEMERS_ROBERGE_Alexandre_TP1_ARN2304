@@ -22,6 +22,8 @@
        type="image"/>
 
 
+
+
 <div id="content">
     <canvas id="wavycanvas" width="500" height="200"></canvas>
 
@@ -32,13 +34,15 @@
             <label>Nom du joueur <input id="message" value="" type="text"></label><br>
             <br>
 
+
+
+
             <a href="game.html">
-                <input id="play" type="button" value="Démarrer">
+                <input id="play" type="button" style="display: none" value="Démarrer">
             </a>
             <br>
         </div>
     </div>
-
 
 
 </div>
@@ -46,6 +50,16 @@
 
 <script src="js/wavy.js"></script>
 <script src="js/script.js"></script>
+
+<script type="application/javascript">
+    window.addEventListener("keyup", function(event) {
+
+        if (event.keyCode === 13) {
+            event.preventDefault();
+            document.getElementById("play").click();
+        }
+    });
+</script>
 
 </body>
 </html>

@@ -18,8 +18,10 @@
     </style>
 
 </head>
+
 <body onload="startGame()">
 
+<!-- The game canvas will be generated here -->
 
 <br>
 <br>
@@ -28,7 +30,9 @@
 
     <h3>Utilisation</h3>
 
+
     <p>Souris = bouger dans le monde</p>
+    <p>Clique = tirer une balle</p>
     <p>M = rendre la musique en sourdine</p>
 
     <h3>Débug</h3>
@@ -62,6 +66,8 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
 <script>
 
+    let debugDraw = false;
+
     const worldObjects = [];
 
     let myGamePiece;
@@ -83,6 +89,8 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     let music;
 
+    let victory;
+
     let phaseHandler;
 
     // World scroll
@@ -95,14 +103,19 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         objectSpawner = new StarSpawner();
 
+        /**
+         * All sounds were generated using https://www.bfxr.net/
+         * */
+
         shieldSound = new Audio("audio/shield.wav");
         hurtSound = new Audio("audio/hurt.wav");
         healSound = new Audio("audio/heal.wav");
         ammoCollectSound = new Audio("audio/ammo.wav");
         deathSound = new Audio("audio/death.wav");
 
-        enemyDestroySound = new Audio("audio/enemyDestroySound.wav");
+        victory = new Audio("audio/victory.wav");
 
+        enemyDestroySound = new Audio("audio/enemyDestroySound.wav");
 
         shootSound = new Audio("audio/shoot.wav");
 
@@ -127,6 +140,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     // Game is ended, player has no more health
     let isGameEnded = false;
+    let isGameEndedFail = false;
 
     const maxHealth = 20;
     let currentHealth = 0;
@@ -135,6 +149,10 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     // Goes from 255 to 0 to show player hurt (255 = white, 0 = red (hurt))
     let damageIndicator = 255;
+
+
+    let isMapDrawn = false;
+
 
     // The player is hurt / damaged
     function HitPlayer(damage) {
@@ -151,6 +169,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         if (currentHealth < 0) {
             deathSound.play();
             isGameEnded = true;
+            isGameEndedFail = true;
             ShowCursor(true);
             setDialog("");
 
@@ -192,7 +211,6 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             isGameStarted = true;
             music.play();
-
 
             ShowCursor(false);
 
@@ -238,8 +256,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         scoreCountText = new UIText(100, 50, "Points : " + score, "30px Segoe UI", "white", -1);
         scoreCountText.blink(true);
 
-        levelText = new UIText(gameWidth / 2, 50, "Niveau : " + level, "20px Segoe UI", "white", -1);
+        levelText = new UIText(gameWidth / 2, 50, "Niveau : " + level, "0px Segoe UI", "white", -1);
         levelText.blink(true);
+
 
         setTimeout(function () {
             scoreCountText.blink(false);
@@ -266,7 +285,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         start: function () {
 
-            //myGameArea.canvas.setAttribute('class', 'center')
+            myGameArea.canvas.setAttribute('class', 'center')
 
             this.canvas.width = gameWidth;
             this.canvas.height = gameHeight;
@@ -564,7 +583,6 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
                 worldObjects.push(new HealObject(gameWidth / 2 - 20, -5));
 
-
                 phaseHandler.nextPhase(1000);
 
             }
@@ -578,7 +596,6 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
 
         this.update = function (tickDelta) {
-
 
             // Spawn healing obj
             if (heal > 0) {
@@ -616,8 +633,10 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
     }
 
+    function WallPhase(endAfterNumberOfBeats, speed, frequency) {
 
-    function WallPhase(endAfterNumberOfBeats) {
+        this.frequency = frequency;
+        this.enemySpeed = speed;
 
         this.start = function () {
             console.log("Started wall phase...");
@@ -636,8 +655,14 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
                 beatIndex++;
 
-                if (beatIndex > endAfterNumberOfBeats) {
+                if (beatIndex > endAfterNumberOfBeats && endAfterNumberOfBeats > -1) {
                     phaseHandler.nextPhase(0);
+                }
+
+                console.log(beatIndex % frequency);
+
+                if (beatIndex % frequency !== 0) {
+                    return;
                 }
 
                 let enemyCount = 30;
@@ -654,16 +679,14 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
                     currentEnemyPos += enemiesPos;
 
-                    // Skip hole
-                    if (i === holeIndex) {
+                    // Skip hole (two width)
+                    if (i === holeIndex || (i + 1 === holeIndex)) {
                         continue;
                     }
 
-                    console.log("Spawning enemy at (" + currentEnemyPos + ", -20)");
+                    //console.log("Spawning enemy at (" + currentEnemyPos + ", -20)");
 
-                    worldObjects.push(new EnemyObject(currentEnemyPos, -20, 20, 1, 0.50));
-
-
+                    worldObjects.push(new EnemyObject(currentEnemyPos, -20, 20, 1, speed));
                 }
             }
 
@@ -681,15 +704,40 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     function BossPhase(phaseHandler) {
 
+        this.phaseHandler = phaseHandler;
+
+        this.wallPhase = new WallPhase(-1, 0.20, 4);
+
         this.start = function () {
             console.log("Started boss phase...");
 
-            worldObjects.push(new BossEnemyObject(phaseHandler, gameWidth / 2, -200, 200, 200));
+            setDialog("C'EST ASSEZ!!!", "red");
+            worldObjects.push(new BossEnemyObject(this.phaseHandler, gameWidth / 2, -200, 0, 200));
+
+        }
+
+        this.update = function (tickDelta) {
+            this.wallPhase.update(tickDelta);
+
+        }
+    }
+
+
+    function VictoryPhase(phaseHandler) {
+
+        this.start = function () {
+            console.log("Started boss phase...");
+
+            music.pause();
+            victory.play();
+
+            isGameEnded = true;
         }
 
         this.update = function (tickDelta) {
         }
     }
+
 
     function EasyPhase(enemies, phaseHandler, spawnTime, message, color, enemySpeed, waveLength, delay) {
 
@@ -786,23 +834,21 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
     }
 
+    let currentPhaseIndex = -1;
+
     function PhaseHandler() {
 
-        let currentPhaseIndex = -1;
-
-        let phase0 = new RecompensePhase(10, 10, 10, this)
-        let phase1 = new BossPhase(1, 10, 0, this);
-
-        /*let phase0 = new IntroPhase(100, this);
+        let phase0 = new IntroPhase(100, this);
         let phase1 = new TextPhase(this, "  ", "Green", "30px Arial", 10, 1000);
         let phase2 = new EasyPhase(100, this, 50, "  ", "white", 0.75, 300, 500);
         let phase3 = new TextPhase(this, "Pas mal du tout!", "Green", "30px Arial", 2500, 400);
         let phase4 = new EasyPhase(100, this, 100, "Et si j'y vais comme ça?", "orange", 1.5, 200, 0);
         let phase5 = new FeelMyWrathPhase(100, this, "C'EST TA FIN!!!", "red", "30px Arial");
         let phase6 = new RecompensePhase(0, 0, 1, this);
-        let phase7 = new WallPhase(10);
-        let phase8 = new RecompensePhase(1, 10, 0, this);
-        let phase9 = new BossPhase(1, 10, 0, this);*/
+        let phase7 = new WallPhase(10, 0.25, 2);
+        let phase8 = new RecompensePhase(10, 10, 10, this)
+        let phase9 = new BossPhase(this);
+        let phase10 = new VictoryPhase();
 
         let isInBetweenPhases = false;
         let timeBeforeNextPhase = 0;
@@ -885,6 +931,8 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         }
 
         worldObjects.push(this);
+
+        isMapDrawn = true;
     }
 
 
@@ -958,7 +1006,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
 
-            if (distanceToPlayer < 20) {
+            if (distanceToPlayer < 40) {
 
                 ShieldPlayer();
 
@@ -1007,7 +1055,7 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
             let distanceToPlayer = CalculateDistance(this.x, this.y, myGamePiece.x, myGamePiece.y);
 
-            if (distanceToPlayer < 20) {
+            if (distanceToPlayer < 40) {
 
                 HealPlayer(maxHealth);
 
@@ -1016,7 +1064,6 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             }
 
             DrawHexagon(ctx, this.x, this.y, 10, "#2cff00");
-
 
         }
 
@@ -1082,8 +1129,8 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         this.x = x;
         this.y = y;
 
-        this.maxHealth = 20;
-        this.currentHealth = 20;
+        this.maxHealth = 5;
+        this.currentHealth = this.maxHealth;
 
         this.finalY = finalY;
 
@@ -1093,15 +1140,30 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
         this.damage = function () {
 
-            console.log("Damagin!");
-
             enemyDestroySound.play();
 
             this.currentHealth -= 1;
 
-            if (currentHealth < 0) {
+            console.log("Damagin! Current health : " + this.currentHealth);
+
+            if (this.currentHealth > 20) {
+                setDialog("ARRGGGHHHH!!!", "red");
+            } else if (this.currentHealth > 15) {
+                setDialog("FINI!!!!!!", "red");
+            } else if (this.currentHealth > 10) {
+                setDialog("L'UNIVERS M'APPARTIENT", "red");
+            }else if (this.currentHealth > 10) {
+                setDialog("JE SUIS LE SEUL À POUVOIR TE BATTRE", "red");
+            } else if (this.currentHealth > 5) {
+                setDialog("SALE VERMINE", "red");
+            } else if (this.currentHealth <= 0) {
+
+                setDialog("", "red");
+
+                console.log("BOSS DIED");
+
                 worldObjects.splice(worldObjects.indexOf(this), 1);
-                this.phaseHandler.next(0);
+                this.phaseHandler.nextPhase(0);
             }
 
         }
@@ -1127,7 +1189,6 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             ctx.fillRect(this.x - barSize / 2, this.y + size + 20, this.currentHealth * sizeFactor, 10);
 
         }
-
     }
 
 
@@ -1256,6 +1317,63 @@ https://en.wikipedia.org/wiki/Recursive_acronym
 
     }
 
+
+    // Draws the dialog (every frame)
+    function drawMap(ctx) {
+
+        this.ctx = ctx;
+
+        function drawCircle(x, y, ctx, radius, color) {
+            // Draw the different levels
+            let cercle = new Path2D();
+            cercle.arc(x, y, radius, 0, 2 * Math.PI);
+
+            ctx.fillStyle = color;
+            ctx.fill(cercle);
+        }
+
+        if (isMapDrawn) {
+            this.ctx.beginPath();
+
+            let levelCount = 9;
+            let spacingX = 50;
+
+            let width = spacingX * (levelCount - 1);
+
+            // Center
+            let startX = (gameWidth / 2) - (width / 2);
+            let startY = 40;
+
+            let darkGray = "rgb(22,22,22)";
+
+            ctx.fillStyle = darkGray;
+            ctx.fillRect(startX, startY, width , 1);
+
+            for (let i = 0; i < levelCount; i++) {
+
+                let color = darkGray;
+
+                if (currentPhaseIndex === i) {
+                    color = "rgb(134,134,134)";
+                }
+
+                if (i == levelCount - 1) {
+                    color = "rgb(79,0,0)";
+                }
+
+                drawCircle(startX + (i * spacingX), startY, ctx, 10, color);
+
+            }
+
+
+        }
+
+    }
+
+
+
+
+
     let lastUpdateTime = 0;
 
     let beginRender = new Date();
@@ -1376,23 +1494,28 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             debugText.setText("Debug : " + debug);
         }
 
-
         if (isGameEnded) {
-
 
             context.beginPath();
 
             context.textAlign = "center";
-            context.fillStyle = "red";
-            context.font = "20px Arial";
-            context.fillText("MISSION ÉCHOUÉE", gameWidth / 2, gameHeight / 2 - 20);
 
-            context.font = "13px Arial";
+
+            context.font = "30px Arial";
+
+            if (isGameEndedFail) {
+                context.fillStyle = "red";
+                context.fillText("MISSION ÉCHOUÉE", gameWidth / 2, gameHeight / 2 - 20);
+            } else {
+                context.fillStyle = "green";
+                context.fillText("MISSION RÉUSSIE", gameWidth / 2, gameHeight / 2 - 20);
+            }
+
+            context.font = "20px Arial";
             context.fillText("Pointage : " + score, gameWidth / 2, gameHeight / 2);
 
             return;
         }
-
 
         worldObjects.forEach(element => {
                 //console.log("Updating " + element);
@@ -1407,6 +1530,9 @@ https://en.wikipedia.org/wiki/Recursive_acronym
         myGamePiece.update(lastUpdateTime, context);
 
         drawDialogView(context);
+
+        drawMap(context);
+
 
         const endRender = new Date();
         lastUpdateTime = (endRender.getMilliseconds() - beginRender.getMilliseconds()) / gameUpdateRate;
@@ -1428,7 +1554,11 @@ https://en.wikipedia.org/wiki/Recursive_acronym
             beatFlip = beatFlip !== true;
 
             // Time the console logs to the sound of the music :)
-            console.log("Updating " + worldObjects.length + " objects with time delta " + lastUpdateTime);
+
+            if (beatCount % 8 === 0) {
+
+                if (debugDraw) console.log("Updating " + worldObjects.length + " objects with time delta " + lastUpdateTime);
+            }
 
         }
 
